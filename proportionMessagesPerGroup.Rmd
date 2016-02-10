@@ -1,0 +1,11 @@
+### `r username` proportion of messages per group
+
+```{r, fig.height=12}
+df %>%
+      group_by(start, channel) %>% mutate(prop = numPosts/sum(numPosts)) %>%
+      filter(user == username) %>%
+      ggplot(aes(start, prop)) + geom_bar(stat="identity") + facet_wrap(~channel) +
+      scale_y_continuous("", limits = c(0,1), labels = percent, breaks = c(0, .25, .5, .75, 1)) + 
+      geom_text(aes(label = paste(numPosts), y = prop + 0.075), size = 3) +
+      labs(title = paste0("Proportion of posts in channel (@", username, ")"))
+```

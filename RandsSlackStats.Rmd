@@ -1,0 +1,138 @@
+---
+title: "Rand Slack Statistics"
+author: "Alexis Iglauer (@alexis)"
+output: 
+  pdf_document: 
+    toc: yes
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(knitr)
+opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=6)
+
+library(reshape2); library(dplyr); library(lubridate)
+library(ggplot2); library(scales)
+library(jsonlite)
+
+rm(list = ls())
+
+listFiles <- dir('data/', '.zip', full.names = TRUE, recursive = TRUE)
+
+getJSON <- function(filenm) {
+  jsonFile <- paste0('output/', gsub(".zip", ".json", basename(filenm)))
+  j <- fromJSON(unz(filenm, jsonFile))
+  j
+}
+
+inJSON <- lapply(listFiles, getJSON)
+extractJSON <- function(d) {
+  dWeek <- paste(d$start, d$end, sep = " -\n ")
+  dStart <- ymd(d$start)
+  dEnd <- ymd(d$end)
+  df <- melt(d$statistics) %>% 
+    rename(user = L2, channel = L1, numPosts = value) %>% 
+    filter(!grepl('\\$', user)) %>%
+    mutate(period = dWeek, start = dStart, end = dEnd)
+  df
+}
+
+df <- bind_rows(lapply(inJSON, extractJSON))
+
+postsPerWeek <- df %>% 
+   group_by(start, user) %>% 
+   summarise(totPosts = sum(numPosts))
+
+latestDate <- max(df$start)
+start4weeks <- latestDate - dweeks(4.5)
+earliestDate <- min(df$start)
+```
+
+# Stats for last week i
+Week starting `r max(df$start)`.
+
+## Top 20 channels and users
+```{r}
+plotDataLastWeek <- df %>% filter(start > latestDate - dweeks(1.1))  
+
+df.channelsLastWeek <- df %>% filter(start > latestDate - dweeks(1.1)) %>% group_by(channel) %>% summarise(numPosts = sum(numPosts)) %>% 
+  arrange(numPosts) %>% top_n(20)
+df.channelsLastWeek %>% 
+  mutate(channel = factor(channel, levels = df.channelsLastWeek$channel %>% unlist)) %>%  # reorder bars
+  ggplot(aes(x = channel, y = numPosts)) + geom_bar(stat = "identity") + coord_flip()
+
+df.usersLastWeek <- df %>% filter(start > latestDate - dweeks(1.1)) %>% group_by(user) %>% summarise(numPosts = sum(numPosts)) %>% 
+  arrange(numPosts) %>% top_n(20)
+df.usersLastWeek %>% 
+  mutate(user = factor(user, levels = df.usersLastWeek$user %>% unlist)) %>%
+  ggplot(aes(x = user, y = numPosts)) + geom_bar(stat = "identity") + coord_flip()
+
+```
+
+# Participation over time
+
+```{r}
+df %>% group_by(start, end) %>% summarise(numPosts = sum(numPosts), numActiveUsers = length(user), numActiveChannels = length(unique(channel))) %>%
+  select(start, end, numPosts, numActiveUsers, numActiveChannels) %>% melt(id.vars = c("start", "end")) %>%
+  ggplot(aes(start, value)) + geom_line() + facet_wrap(~variable, ncol = 1, scales = "free_y") + 
+  scale_y_continuous(label = comma)
+```
+
+
+# Top 20(-ish) users
+
+Users who were in the Top 20 of messages posted, either since the beginning of the statistics (`r format(earliestDate, "%Y-%b-%d")`) or in the last 4 weeks (since `r format(start4weeks, "%Y-%b-%d")`).  Note this could be more than 20 people.
+
+```{r, echo=FALSE}
+# Top N per week
+allTime <- df %>% 
+  group_by(user) %>% 
+  summarise(allTime = sum(numPosts)) %>% arrange(desc(allTime)) 
+
+last4weeks <- df %>% filter(start > start4weeks) %>%
+  group_by(user) %>% 
+  summarise(last4weeks = sum(numPosts)) %>% arrange(desc(last4weeks)) 
+
+# Pick everyone who has been in the top 20 in either all time or in the last 4 weeks
+TopNtable <- distinct(bind_rows(select(top_n(allTime, 20, allTime), user), select(top_n(last4weeks, 20, last4weeks), user))) %>% 
+                left_join(allTime) %>%
+                left_join(last4weeks) %>%
+                arrange(desc(allTime))
+
+TopNusers <- select(TopNtable, user)
+
+kable(TopNtable, row.names = TRUE, format.args = c(big.mark= "'"))
+
+```
+
+## Top20 users as a proportion of total
+
+```{r}
+postsPerWeek %>% mutate(Top20 = ifelse(user %in% TopNusers$user, TRUE, FALSE)) %>%
+  ggplot(aes(start, weight=totPosts, fill=Top20)) + geom_bar() +
+  scale_y_continuous("Number of posts", label = comma) +
+  theme(legend.position="bottom")
+
+```
+
+# Detailed stats for the Top20 users
+
+```{r, include=FALSE, fig.height=12}
+# propPerChannel <- function(username) {
+#   p <- df %>%
+#       group_by(start, channel) %>% mutate(prop = numPosts/sum(numPosts)) %>%
+#       filter(user == username) %>%
+#       ggplot(aes(start, prop)) + geom_bar(stat="identity") + facet_wrap(~channel) +
+#       scale_y_continuous("", limits = c(0,1), labels = percent, breaks = c(0, .25, .5, .75, 1)) + 
+#       geom_text(aes(label = paste(numPosts), y = prop + 0.075), size = 3) +
+#       labs(title = paste0("Proportion of posts in channel (@", username, ")"))
+#   c(username, p)
+# }
+
+out <- NULL
+
+for (username in TopNusers$user) {
+  out <- c(out, knit_child('proportionMessagesPerGroup.Rmd'))
+}
+
+```
+`r paste(out, collapse = '\n')`
