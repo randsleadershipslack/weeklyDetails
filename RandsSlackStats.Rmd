@@ -1,6 +1,6 @@
 ---
 title: "Rand Slack Statistics"
-author: "Alexis Iglauer (@alexis)"
+author: "@alexis"
 output: 
   pdf_document: 
     toc: yes
@@ -43,24 +43,24 @@ postsPerWeek <- df %>%
    summarise(totPosts = sum(numPosts))
 
 latestDate <- max(df$start)
-start4weeks <- latestDate - dweeks(4.5)
+start4weeks <- latestDate - dweeks(3.5)
 earliestDate <- min(df$start)
 ```
 
-# Stats for last week i
+# Stats for last week
 Week starting `r max(df$start)`.
 
 ## Top 20 channels and users
 ```{r}
-plotDataLastWeek <- df %>% filter(start > latestDate - dweeks(1.1))  
+plotDataLastWeek <- df %>% filter(start == latestDate)  
 
-df.channelsLastWeek <- df %>% filter(start > latestDate - dweeks(1.1)) %>% group_by(channel) %>% summarise(numPosts = sum(numPosts)) %>% 
+df.channelsLastWeek <- plotDataLastWeek %>% group_by(channel) %>% summarise(numPosts = sum(numPosts)) %>% 
   arrange(numPosts) %>% top_n(20)
 df.channelsLastWeek %>% 
   mutate(channel = factor(channel, levels = df.channelsLastWeek$channel %>% unlist)) %>%  # reorder bars
   ggplot(aes(x = channel, y = numPosts)) + geom_bar(stat = "identity") + coord_flip()
 
-df.usersLastWeek <- df %>% filter(start > latestDate - dweeks(1.1)) %>% group_by(user) %>% summarise(numPosts = sum(numPosts)) %>% 
+df.usersLastWeek <- plotDataLastWeek %>% group_by(user) %>% summarise(numPosts = sum(numPosts)) %>% 
   arrange(numPosts) %>% top_n(20)
 df.usersLastWeek %>% 
   mutate(user = factor(user, levels = df.usersLastWeek$user %>% unlist)) %>%
