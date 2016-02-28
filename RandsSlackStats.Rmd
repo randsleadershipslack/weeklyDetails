@@ -19,8 +19,9 @@ rm(list = ls())
 listFiles <- dir('data/', '.zip', full.names = TRUE, recursive = TRUE)
 
 getJSON <- function(filenm) {
-  jsonFile <- paste0('output/', gsub(".zip", ".json", basename(filenm)))
-  j <- fromJSON(unz(filenm, jsonFile))
+# extract the JSON content from the zipfile.  Assumes one .json per .zip
+  jsonFileName <- grep(".json", unzip(filenm, list = TRUE)$Name, value = TRUE)  # find .json file in the zipfile
+  j <- fromJSON(unz(filenm, jsonFileName))
   j
 }
 

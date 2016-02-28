@@ -1,9 +1,20 @@
 ### `r username` proportion of messages per group
 
 ```{r, fig.height=12}
-df %>%
+oneWeekOnly <- (df %>% filter(user == username) %>% select(start) %>% unique() %>% nrow()) == 1
+
+if (oneWeekOnly) {
+  userData <- df %>% ungroup() %>% 
+      mutate(start = as.factor(start)) %>%  # graph chokes if there is only a single week as a date
       group_by(start, channel) %>% mutate(prop = numPosts/sum(numPosts)) %>%
-      filter(user == username) %>%
+      filter(user == username)
+} else {
+  userData <- df %>% ungroup() %>% 
+      group_by(start, channel) %>% mutate(prop = numPosts/sum(numPosts)) %>%
+      filter(user == username)
+}
+
+userData %>%  
       ggplot(aes(start, prop)) + geom_bar(stat="identity") + facet_wrap(~channel) +
       scale_y_continuous("", limits = c(0,1), labels = percent, breaks = c(0, .25, .5, .75, 1)) + 
       geom_text(aes(label = paste(numPosts), y = prop + 0.075), size = 3) +
