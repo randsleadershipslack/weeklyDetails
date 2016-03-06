@@ -4,6 +4,8 @@ author: "@alexis"
 output: 
   pdf_document: 
     toc: yes
+    includes:
+      in_header: header.tex
 ---
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
