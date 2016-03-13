@@ -117,6 +117,38 @@ postsPerWeek %>% mutate(Top20 = ifelse(user %in% TopNusers$user, TRUE, FALSE)) %
 
 ```
 
+# Activity over time per starting month
+
+```{r, fig.width=8}
+cohorts <- df %>% group_by(user) %>%
+              summarise(first_post = min(start), last_post = max(start)) %>% 
+              mutate(numWeeksActive = as.integer(difftime(last_post, first_post, units = "weeks")) + 1,
+                     first_seen = format(first_post, "%Y-%m")) %>%
+              inner_join(
+                df %>% group_by(user, start) %>% summarise(postsPerWeek = sum(numPosts))    # number of posts per week
+              ) %>%
+              mutate(weekNo = as.integer(difftime(start, first_post, units = "weeks")))
+
+cohorts %>% select(user, first_seen, numWeeksActive) %>% distinct() %>%
+  ggplot(aes(numWeeksActive)) + geom_bar() + facet_wrap(~first_seen, ncol = 1, labeller = label_both) +
+  labs(title = "Number of users active since first spotted", x = "Weeks since first seen", y = "Number of users active")
+```
+
+Notes:
+
+* The data begins in 2015-09, so the top graph shows that many of the users who were active at the start of the data are still active
+* For all following weeks, we can see that many users are only active in their first week, and only a small number keep posting after that
+
+```{r, eval=FALSE}
+oneWeekers <- cohorts %>% filter(numWeeksActive == 1) %>% left_join(df)
+
+oneWeekers %>% group_by(user) %>% summarise(numPosts = sum(numPosts)) %>% select(user, numPosts) %>%
+  ggplot(aes(numPosts)) + geom_histogram(binwidth = 1) 
+oneWeekers %>% group_by(user, channel) %>% summarise(numPosts = sum(numPosts)) %>% select(user, channel, numPosts) %>%
+  ggplot(aes(numPosts)) + geom_histogram(binwidth = 1) + facet_wrap(~channel)
+```
+
+
 # Detailed stats for the Top20 users
 
 ```{r, include=FALSE, fig.height=12}
