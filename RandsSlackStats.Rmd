@@ -50,6 +50,8 @@ start4weeks <- latestDate - dweeks(3.5)
 earliestDate <- min(df$start)
 ```
 
+\pagebreak
+
 # Stats for last week
 Week starting `r max(df$start)`.
 
@@ -71,7 +73,7 @@ df.usersLastWeek %>%
 
 ```
 
-# Participation over time
+# Overall participation over time
 
 ```{r}
 df %>% group_by(start, end) %>% summarise(numPosts = sum(numPosts), numActiveUsers = length(user), numActiveChannels = length(unique(channel))) %>%
@@ -117,7 +119,7 @@ postsPerWeek %>% mutate(Top20 = ifelse(user %in% TopNusers$user, TRUE, FALSE)) %
 
 ```
 
-# Activity over time per starting month
+# Activity over time per user
 
 ```{r, fig.width=8}
 cohorts <- df %>% group_by(user) %>%
@@ -129,9 +131,16 @@ cohorts <- df %>% group_by(user) %>%
               ) %>%
               mutate(weekNo = as.integer(difftime(start, first_post, units = "weeks")))
 
-cohorts %>% select(user, first_seen, numWeeksActive) %>% distinct() %>%
-  ggplot(aes(numWeeksActive)) + geom_bar() + facet_wrap(~first_seen, ncol = 1, labeller = label_both) +
-  labs(title = "Number of users active since first spotted", x = "Weeks since first seen", y = "Number of users active")
+# cohorts %>% select(user, first_seen, numWeeksActive) %>% distinct() %>%
+#   ggplot(aes(numWeeksActive)) + geom_bar() + facet_wrap(~first_seen, ncol = 1, labeller = label_both) +
+#   labs(title = "Number of users active since first spotted", x = "Weeks since first seen", y = "Number of users active")
+
+cohorts %>% group_by(first_seen, weekNo) %>% summarise(n = n()) %>%
+  ggplot(aes(weekNo, n, colour = first_seen)) + geom_line() + 
+  scale_y_continuous(breaks = seq(10, 200, 10)) +
+  labs(title = "Number of users active since first post", x = "Weeks since first posted", y = "Number of users active", colour = "First posted") +
+  theme(legend.position = "bottom")
+
 ```
 
 Notes:
