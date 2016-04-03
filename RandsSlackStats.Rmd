@@ -18,12 +18,16 @@ library(jsonlite)
 
 rm(list = ls())
 
-listFiles <- dir('data/', '.zip', full.names = TRUE, recursive = TRUE)
+listFiles <- dir('data/', '.zip|.json', full.names = TRUE, recursive = TRUE)
 
 getJSON <- function(filenm) {
-# extract the JSON content from the zipfile.  Assumes one .json per .zip
-  jsonFileName <- grep(".json", unzip(filenm, list = TRUE)$Name, value = TRUE)  # find .json file in the zipfile
-  j <- fromJSON(unz(filenm, jsonFileName))
+# extract the JSON content from the zipfile.  Assumes one .json per .zip, or .json file
+  if (grepl(".zip", filenm)) {
+    jsonFileName <- grep(".json", unzip(filenm, list = TRUE)$Name, value = TRUE)  # find .json file in the zipfile
+    j <- fromJSON(unz(filenm, jsonFileName))
+  } else {
+    j <- fromJSON(filenm)
+  }
   j
 }
 
