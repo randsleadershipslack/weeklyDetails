@@ -113,12 +113,26 @@ kable(TopNtable, row.names = TRUE, format.args = c(big.mark= "'"))
 
 ```
 
-## Top20 users as a proportion of total
+## Top20 users number of posts
 
 ```{r}
 postsPerWeek %>% mutate(Top20 = ifelse(user %in% TopNusers$user, TRUE, FALSE)) %>%
   ggplot(aes(start, weight=totPosts, fill=Top20)) + geom_bar() +
   scale_y_continuous("Number of posts", label = comma) +
+  theme(legend.position="bottom")
+
+```
+
+## Top20 users as a proportion of the total
+
+```{r}
+postsPerWeek %>% mutate(Top20 = ifelse(user %in% TopNusers$user, TRUE, FALSE)) %>% 
+  group_by(start, Top20) %>%
+  summarise(n = sum(totPosts)) %>%
+  mutate(proportion = n / sum(n)) %>%
+  ggplot(aes(start, weight=proportion, fill=Top20)) + geom_bar() +
+  scale_y_continuous("Number of posts", label = percent) +
+  geom_hline(aes(yintercept = 0.5)) +
   theme(legend.position="bottom")
 
 ```
